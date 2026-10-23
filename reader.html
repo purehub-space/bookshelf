@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>阅读 · 在线书库</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:#f4efe6;color:#2d2418;font-family:-apple-system,"PingFang SC","Microsoft YaHei",sans-serif}
+  .topbar{position:sticky;top:0;z-index:20;display:flex;align-items:center;gap:14px;padding:10px 18px;
+          background:#fffdf8;border-bottom:1px solid #e8ddcc}
+  .topbar a{color:#8a7b66;text-decoration:none;font-size:15px;white-space:nowrap}
+  .topbar a:hover{color:#b8860b}
+  .topbar .title{flex:1;text-align:center;font-weight:600;font-size:16px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .topbar .ctrl{display:flex;align-items:center;gap:8px}
+  .btn{background:#b8860b;color:#fff;border:none;border-radius:8px;padding:7px 15px;font-size:14px;cursor:pointer}
+  .btn:disabled{opacity:.4;cursor:not-allowed}
+  .btn.ghost{background:#f0e9dc;color:#2d2418}
+  #pageinfo{font-size:13px;color:#8a7b66;min-width:70px;text-align:center}
+  #reader{width:100%;height:calc(100vh - 53px);display:flex;justify-content:center;align-items:center;background:#f4efe6;overflow:auto}
+  #epub_viewer{width:100%;height:100%}
+  #pdf_canvas{display:block;max-width:100%;height:auto;box-shadow:0 4px 20px rgba(0,0,0,.12)}
+  .loading{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#8a7b66;font-size:15px;background:#f4efe6}
+  .loading .spin{width:32px;height:32px;border:3px solid #e8ddcc;border-top-color:#b8860b;border-radius:50%;animation:s .8s linear infinite;margin-bottom:14px}
+  @keyframes s{to{transform:rotate(360deg)}}
+  #tocWrap{display:none;position:absolute;right:0;top:53px;width:320px;max-height:70vh;overflow:auto;background:#fffdf8;border:1px solid #e8ddcc;border-radius:0 0 0 12px;z-index:30;padding:12px}
+  #tocWrap a{display:block;padding:7px 10px;color:#2d2418;text-decoration:none;font-size:13.5px;border-radius:6px}
+  #tocWrap a:hover{background:#f0e9dc}
+  #searchBtn{background:#fffdf8;color:#2d2418;border:1px solid #e8ddcc;border-radius:8px;padding:6px 12px;font-size:14px;cursor:pointer;text-decoration:none}
+  #searchBtn:hover{background:#f0e9dc}
+</style>
+</head>
+<body>
+<div class="topbar">
+  <a href="index.html">← 书架</a>
+  <a href="search.html" id="searchBtn">🔍 搜书</a>
+  <div class="title" id="title">加载中…</div>
+  <div class="ctrl">
+    <span id="pageinfo"></span>
+    <button class="btn ghost" id="tocBtn" style="display:none">目录</button>
+    <button class="btn" id="prev">上一页</button>
+    <button class="btn" id="next">下一页</button>
+  </div>
+</div>
+<div id="tocWrap"></div>
+<div class="loading"><div class="spin"></div>正在打开书籍…</div>
+<div id="reader"><div id="epub_viewer"></div><canvas id="pdf_canvas" style="display:none"></canvas></div>
+
+<script src="lib/jszip.min.js"></script>
+<script src="lib/epub.min.js"></script>
+<script src="lib/pdf.min.js"></script>
+<script>
+(function(){
+  var params=new URLSearchParams(location.search);
+  var file=params.get('file')||'';
+  var title=params.get('title')||'在线书籍';
+  document.getElementById('title').textContent=title;
+  var isPdf=/\.pdf$/i.test(file);
+  var loader=document.querySelector('.loading');
+  var prev=document.getElementById('prev'),next=document.getElementById('next');
+  var info=document.getElementById('pageinfo');
+
+  function hideLoader(){loader.style.display='none'}
+  function showErr(msg){
+    document.getElementById('reader').innerHTML='<div style="margin:60px auto;color:#8a7b66;text-align:center;max-width:520px">'+msg+'<br><br><a href="index.html" style="color:#b8860b">返回书架</a> <a href="search.html" style="color:#b8860b;margin-left:14px">搜书</a></div>';
+  }
+
+  // ===== PDF 渲染 =====
+  function loadPdf(){
+    pdfjsLib.GlobalWorkerOptions.workerSrc='lib/pdf.worker.min.js';
+    var canvas=document.getElementById('pdf_canvas');
+    var ctx=canvas.getContext('2d');
+    var pdfDoc=null,pageNum=1,total=0;
+    var rendering=false;
+    function renderPage(n){
+      rendering=true;
+      pdfDoc.getPage(n).then(function(page){
+        var vp1=page.getViewport({scale:1});
+        var availW=Math.max(320, window.innerWidth-80);
+        var availH=window.innerHeight-90;
+        var scale=Math.min(availW/vp1.width, availH/vp1.height);
+        var vp=page.getViewport({scale:scale});
+        canvas.width=vp.width;canvas.height=vp.height;
+        page.render({canvasContext:ctx,viewport:vp}).promise.then(function(){
+          info.textContent=pageNum+' / '+total;
+          prev.disabled=(pageNum<=1);next.disabled=(pageNum>=total);
+          rendering=false;
+        }).catch(function(){rendering=false});
+      });
+    }
+    pdfjsLib.getDocument(file).promise.then(function(pdf){
+      pdfDoc=pdf;total=pdf.numPages;
+      canvas.style.display='block';
+      hideLoader();
+      renderPage(1);
+    }).catch(function(e){
+      hideLoader();showErr('PDF 打开失败：'+e.message);
+    });
+    prev.onclick=function(){if(pageNum>1&&!rendering){pageNum--;renderPage(pageNum)}};
+    next.onclick=function(){if(pageNum<total&&!rendering){pageNum++;renderPage(pageNum)}};
+    window.addEventListener('resize',function(){if(pdfDoc)renderPage(pageNum)});
+  }
+
+  // ===== EPUB 渲染 =====
+  function loadEpub(){
+    var book=ePub(file,{openAs:'epub'});
+    var rendition=book.renderTo('epub_viewer',{width:window.innerWidth,height:window.innerHeight-53,spread:'none',flow:'paginated'});
+    var displayed=rendition.display();
+    var located=false;
+    rendition.on('relocated',function(loc){
+      if(!located){located=true;hideLoader()}
+      if(loc&&loc.start&&loc.start.location){
+        info.textContent=Math.round(loc.start.percentage*100)+'%';
+      }
+    });
+    displayed.then(hideLoader).catch(function(){hideLoader()});
+    book.loaded.navigation.then(function(nav){
+      var toc=nav.toc||[];
+      if(toc.length){
+        document.getElementById('tocBtn').style.display='inline-block';
+        var w=document.getElementById('tocWrap');
+        toc.forEach(function(i){
+          var a=document.createElement('a');
+          a.textContent=i.label.trim()||'章节';
+          a.href='javascript:void(0)';
+          a.onclick=function(){rendition.display(i.href);w.style.display='none'};
+          w.appendChild(a);
+        });
+      }
+    });
+    document.getElementById('tocBtn').onclick=function(){
+      var w=document.getElementById('tocWrap');w.style.display=w.style.display==='block'?'none':'block';
+    };
+    prev.onclick=function(){rendition.prev()};
+    next.onclick=function(){rendition.next()};
+    window.addEventListener('resize',function(){try{rendition.resize(window.innerWidth,window.innerHeight-53)}catch(e){}});
+  }
+
+  if(isPdf)loadPdf();else if(/\.epub$/i.test(file))loadEpub();
+  else {hideLoader();showErr('不支持的格式（请用 EPUB 或 PDF）')}
+})();
+</script>
+</body>
+</html>

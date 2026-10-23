@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TikTok 运营书库 · 在线书架</title>
+<style>
+  :root{--bg:#f5efe6;--panel:#fffdf8;--ink:#2d2418;--sub:#8a7b66;--accent:#b8860b;--line:#e8ddcc}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--bg);color:var(--ink);font-family:-apple-system,"PingFang SC","Microsoft YaHei",sans-serif;min-height:100vh}
+  header{padding:40px 24px 20px;text-align:center;position:relative}
+  header h1{font-size:28px;letter-spacing:2px}
+  header p{color:var(--sub);margin-top:8px;font-size:14px}
+  .stats{color:var(--sub);font-size:13px;margin-top:6px}
+  .nav{position:absolute;top:18px;right:22px;display:flex;gap:10px}
+  .nav a{display:inline-block;padding:8px 16px;border-radius:10px;text-decoration:none;font-size:14px;transition:.15s}
+  .nav a.search{background:var(--accent);color:#fff;font-weight:600}
+  .nav a.search:hover{opacity:.9}
+  .nav a.upload{background:#fffdf8;color:var(--ink);border:1px solid var(--line)}
+  .nav a.upload:hover{background:#f0e9dc}
+  .wrap{max-width:1180px;margin:0 auto;padding:10px 24px 60px}
+  .legend{display:flex;flex-wrap:wrap;gap:10px;justify-content:center;margin:18px 0 30px;color:var(--sub);font-size:12px}
+  .legend span{display:inline-flex;align-items:center;gap:6px}
+  .dot{width:10px;height:10px;border-radius:50%;display:inline-block}
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:22px}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;overflow:hidden;cursor:pointer;
+        transition:transform .18s,box-shadow .18s;text-decoration:none;color:inherit;display:block}
+  .card:hover{transform:translateY(-4px);box-shadow:0 10px 24px rgba(184,134,11,.18)}
+  .cover{aspect-ratio:3/4;display:flex;flex-direction:column;justify-content:flex-end;padding:16px;
+        background:linear-gradient(160deg,var(--c1),var(--c2));color:#fff;position:relative}
+  .cover .fmt{position:absolute;top:12px;right:12px;font-size:11px;padding:3px 8px;border-radius:6px;background:rgba(0,0,0,.25);letter-spacing:.5px}
+  .cover .t{font-size:17px;font-weight:700;line-height:1.3;text-shadow:0 1px 3px rgba(0,0,0,.3)}
+  .meta{padding:12px 14px}
+  .meta .au{font-size:12.5px;color:var(--sub)}
+  .tag{display:inline-block;margin-top:6px;font-size:10.5px;color:var(--accent);border:1px solid var(--line);border-radius:20px;padding:2px 9px}
+  .addcard{display:flex;align-items:center;justify-content:center;gap:10px;background:#fffdf8;border:2px dashed var(--line);color:var(--sub);font-size:14px;min-height:220px}
+  .addcard:hover{border-color:var(--accent);color:var(--accent)}
+  footer{text-align:center;color:var(--sub);font-size:12px;padding:20px}
+  .searchbar{max-width:560px;margin:6px auto 22px;display:flex;gap:8px}
+  .searchbar input{flex:1;padding:11px 16px;border:1px solid var(--line);border-radius:12px;font-size:15px;background:#fffdf8;color:var(--ink);outline:none}
+  .searchbar input:focus{border-color:var(--accent)}
+  .searchbar button{padding:11px 20px;border:none;border-radius:12px;background:var(--accent);color:#fff;font-size:15px;cursor:pointer}
+  .empty{display:none;text-align:center;color:var(--sub);padding:30px;font-size:14px}
+</style>
+</head>
+<body>
+<header>
+  <div class="nav">
+    <a class="search" href="search.html">🔍 搜书</a>
+    <a class="upload" href="search.html">＋ 添加</a>
+  </div>
+  <h1>📚 TikTok 运营书库</h1>
+  <p>跨境电商 · 内容营销 · 增长黑客 · 社交传播 · 用户心理</p>
+  <div class="stats" id="stats"></div>
+  <div class="searchbar">
+    <input id="q" placeholder="搜索书架内书名 / 作者…" oninput="doFilter()">
+    <button onclick="goSearch()">全网搜书 →</button>
+  </div>
+</header>
+<div class="wrap">
+  <div class="legend">
+    <span><i class="dot" style="background:#c0392b"></i>增长</span>
+    <span><i class="dot" style="background:#b8860b"></i>TikTok/电商</span>
+    <span><i class="dot" style="background:#2e86c1"></i>传播</span>
+    <span><i class="dot" style="background:#7d3c98"></i>心理</span>
+    <span><i class="dot" style="background:#1e8449"></i>平台生态</span>
+  </div>
+  <div class="empty" id="empty">没有匹配的书，试试<a href="search.html" style="color:var(--accent)">全网搜书</a></div>
+  <div class="grid" id="grid"></div>
+</div>
+<footer>自制在线书架 · 点击任意书开始阅读 · 想读的书可在「搜书」页提交</footer>
+
+<script>
+const BOOKS=[
+  {f:"Become_an_Expert_of_TikTok.pdf",t:"Become an Expert of TikTok",a:"Seth ROWSE",fmt:"PDF",tag:"TikTok/电商",c1:"#b8860b",c2:"#7d5a00"},
+  {f:"Contagious_Jonah_Berger.epub",t:"Contagious（疯传）",a:"Jonah Berger",fmt:"EPUB",tag:"传播",c1:"#2e86c1",c2:"#1b4f72"},
+  {f:"Cracking_the_TikTok_Algorithm.epub",t:"Cracking the TikTok Algorithm",a:"Fintastic Data",fmt:"EPUB",tag:"TikTok/电商",c1:"#b8860b",c2:"#7d5a00"},
+  {f:"Growth_Hacking_Silicon_Valley.epub",t:"Growth Hacking: Silicon Valley's…",a:"Raymond Fong",fmt:"EPUB",tag:"增长",c1:"#c0392b",c2:"#7b241c"},
+  {f:"Hacking_Growth.epub",t:"Hacking Growth（增长黑客）",a:"Sean Ellis & Morgan Brown",fmt:"EPUB",tag:"增长",c1:"#c0392b",c2:"#7b241c"},
+  {f:"Influence_Robert_Cialdini.pdf",t:"Influence（影响力）",a:"Robert B. Cialdini",fmt:"PDF",tag:"心理",c1:"#7d3c98",c2:"#512e5f"},
+  {f:"Made_to_Stick_Heath.pdf",t:"Made to Stick（让创意更有黏性）",a:"Chip & Dan Heath",fmt:"PDF",tag:"传播",c1:"#2e86c1",c2:"#1b4f72"},
+  {f:"One_million_followers.epub",t:"One Million Followers",a:"Brendan Kane",fmt:"EPUB",tag:"增长",c1:"#c0392b",c2:"#7b241c"},
+  {f:"The_Growth_Hacking_Book.epub",t:"The Growth Hacking Book",a:"Rohan Chaubey",fmt:"EPUB",tag:"增长",c1:"#c0392b",c2:"#7b241c"},
+  {f:"The_Hype_Machine_Sinan_Aral_en.epub",t:"The Hype Machine",a:"Sinan Aral",fmt:"EPUB",tag:"平台生态",c1:"#1e8449",c2:"#145a32"},
+  {f:"The_TikTok_Shop_Launchpad.epub",t:"The TikTok Shop Launchpad",a:"Gil Gatson",fmt:"EPUB",tag:"TikTok/电商",c1:"#b8860b",c2:"#7d5a00"},
+  {f:"This_Is_Marketing_Seth_Godin.epub",t:"This Is Marketing（这才是营销）",a:"Seth Godin",fmt:"EPUB",tag:"传播",c1:"#2e86c1",c2:"#1b4f72"},
+  {f:"TikTok_Boom.epub",t:"TikTok Boom",a:"Chris Stokel-Walker",fmt:"EPUB",tag:"平台生态",c1:"#1e8449",c2:"#145a32"},
+  {f:"TikTok_Marketing_How_to_Leverage_the_TikTok_Platfo.pdf",t:"TikTok Marketing",a:"—",fmt:"PDF",tag:"TikTok/电商",c1:"#b8860b",c2:"#7d5a00"},
+  {f:"TikTok爆款攻略_跨境电商的流量玩法与赚钱逻辑_笛子.epub",t:"TikTok爆款攻略",a:"笛子",fmt:"EPUB",tag:"TikTok/电商",c1:"#b8860b",c2:"#7d5a00"}
+];
+const grid=document.getElementById('grid');
+function render(list){
+  grid.innerHTML='';
+  list.forEach(b=>{
+    const card=document.createElement('a');
+    card.className='card';
+    card.href='reader?file=books/'+encodeURIComponent(b.f)+'&title='+encodeURIComponent(b.t);
+    card.innerHTML='<div class="cover" style="--c1:'+b.c1+';--c2:'+b.c2+'">'
+      +'<span class="fmt">'+b.fmt+'</span>'
+      +'<div class="t">'+b.t+'</div></div>'
+      +'<div class="meta"><div class="au">'+b.a+'</div><span class="tag">'+b.tag+'</span></div>';
+    grid.appendChild(card);
+  });
+  const add=document.createElement('a');
+  add.className='card addcard';add.href='search.html';
+  add.innerHTML='<span style="font-size:28px">＋</span><span>想读别的？<br>点这里搜书</span>';
+  grid.appendChild(add);
+}
+function doFilter(){
+  const q=document.getElementById('q').value.trim().toLowerCase();
+  const list=q?BOOKS.filter(b=>(b.t+' '+b.a+' '+b.tag).toLowerCase().includes(q)):BOOKS;
+  document.getElementById('empty').style.display=list.length?'none':'block';
+  render(list);
+  document.getElementById('stats').textContent='书架 '+BOOKS.length+' 本 · 匹配 '+list.length+' 本';
+}
+function goSearch(){
+  const q=document.getElementById('q').value.trim();
+  location.href='search.html'+(q?'?q='+encodeURIComponent(q):'');
+}
+render(BOOKS);
+document.getElementById('stats').textContent='共 '+BOOKS.length+' 本 · EPUB '+BOOKS.filter(b=>b.fmt==='EPUB').length+' 本 · PDF '+BOOKS.filter(b=>b.fmt==='PDF').length+' 本';
+</script>
+</body>
+</html>

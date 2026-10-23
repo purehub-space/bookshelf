@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>搜书 · 在线书库</title>
+<style>
+  :root{--bg:#f5efe6;--panel:#fffdf8;--ink:#2d2418;--sub:#8a7b66;--accent:#b8860b;--line:#e8ddcc}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--bg);color:var(--ink);font-family:-apple-system,"PingFang SC","Microsoft YaHei",sans-serif;min-height:100vh}
+  header{padding:34px 24px 14px;text-align:center;position:relative}
+  .nav{position:absolute;top:16px;left:22px;display:flex;gap:10px}
+  .nav a{text-decoration:none;color:var(--sub);font-size:14px;padding:7px 14px;border:1px solid var(--line);border-radius:10px;background:#fffdf8}
+  .nav a:hover{color:var(--accent)}
+  header h1{font-size:26px;letter-spacing:2px}
+  header p{color:var(--sub);margin-top:6px;font-size:13px}
+  .wrap{max-width:760px;margin:0 auto;padding:18px 24px 60px}
+  .searchbox{display:flex;gap:10px;max-width:640px;margin:22px auto 14px}
+  .searchbox input{flex:1;padding:13px 18px;border:1px solid var(--line);border-radius:14px;font-size:16px;background:#fffdf8;outline:none}
+  .searchbox input:focus{border-color:var(--accent)}
+  .searchbox button{padding:13px 26px;border:none;border-radius:14px;background:var(--accent);color:#fff;font-size:16px;cursor:pointer}
+  .requested{display:none;background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:22px;margin:8px auto 0;max-width:640px}
+  .requested h3{font-size:16px;margin-bottom:10px}
+  .requested .note{color:var(--sub);font-size:13.5px;line-height:1.8;margin-bottom:12px}
+  .cmd{background:#2d2418;color:#f0e9dc;border-radius:10px;padding:14px 16px;font-family:monospace;font-size:12.5px;white-space:pre-wrap;word-break:break-all}
+  .hint{color:var(--sub);font-size:12.5px;margin-top:12px;line-height:1.8}
+  .workflow{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:22px;margin-top:26px}
+  .workflow h3{font-size:16px;margin-bottom:12px}
+  .workflow ol{margin:0 0 0 20px;color:var(--sub);font-size:13.5px;line-height:2}
+  .workflow b{color:var(--ink)}
+  .workflow code{background:#f0e9dc;padding:2px 7px;border-radius:6px;font-size:12.5px;color:var(--ink)}
+  .tips{background:#fffaf0;border:1px solid #f0e0c0;border-radius:12px;padding:14px 18px;margin-top:18px;font-size:13px;color:#7a5a2a;line-height:1.8}
+  footer{text-align:center;color:var(--sub);font-size:12px;padding:20px}
+</style>
+</head>
+<body>
+<header>
+  <div class="nav"><a href="index.html">← 书架</a><a href="reader.html">阅读器</a></div>
+  <h1>🔍 全网搜书</h1>
+  <p>检索 Z-Library 全球电子书库 · 找到后由「opencode 书搜」下载并加入书架</p>
+</header>
+<div class="wrap">
+  <div class="searchbox">
+    <input id="q" placeholder="想读什么？书名 / 作者，如 Contagious Jonah Berger…" onkeydown="if(event.key==='Enter')submit()">
+    <button onclick="submit()">申请搜书</button>
+  </div>
+  <div class="requested" id="req">
+    <h3>已受理：<span id="reqq"></span></h3>
+    <div class="note">给豆包助手说一句<b>「帮我把这本书搜出来并加进书库」</b>，或用下面命令让 <code>opencode</code> 后台执行。检索来自 Z-Library，助手会自动破解反爬、绕过每日下载限额，下载 EPUB/PDF 后加入 <code>books/</code> 并重新部署，随后书会出现在书架。</div>
+    <div class="cmd" id="cmd"></div>
+    <div class="hint">提示：Z-Library 以英文书为主，搜中文书名可能命中译文，建议填英文书名 + 作者，命中率更高。</div>
+  </div>
+
+  <div class="workflow">
+    <h3>搜书 → 入架流程</h3>
+    <ol>
+      <li>在搜索框输入<b>英文书名/作者</b>（建议英文，命中率高）。</li>
+      <li>告诉助手「<b>帮我搜《书名》加进书库</b>」，或复制下方命令在终端运行。</li>
+      <li>opencode 书搜 agent 检索 Z-Library → 选 EPUB/PDF → 破解反爬 → 下载。</li>
+      <li>文件落入 <code>books/</code> → 重新部署 → 书架出现这本书，点开即读。</li>
+    </ol>
+  </div>
+
+  <div class="tips">
+    💡 已内置的能力：自动解 SHA1 工作量证明、识别真实文件格式（按魔数）、匿名每日 5 次限额自动换节点绕过。遇到下载受限的书，助手会从详情页取真实短链；仍不行的书，把浏览器「下载」按钮的真实 <code>/dl/xxx</code> 链接给助手即可直接下载。
+  </div>
+</div>
+<footer>书源：Z-Library（仅供个人学习备份）· 阅读由在线书架提供</footer>
+
+<script>
+const $=id=>document.getElementById(id);
+function submit(){
+  const q=$('q').value.trim();
+  if(!q)return;
+  const r=$('req');r.style.display='block';
+  $('reqq').textContent=q;
+  $('cmd').textContent='opencode run book-search "'+q+'" --out books/\n# 搜索并下载第一个 EPUB 到 books/，然后 git 提交 + wrangler 部署';
+}
+window.addEventListener('load',()=>{
+  const q=new URLSearchParams(location.search).get('q');
+  if(q){$('q').value=q;submit();}
+});
+</script>
+</body>
+</html>
