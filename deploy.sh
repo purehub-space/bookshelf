@@ -12,10 +12,22 @@ if [[ -z "${CLOUDFLARE_ACCOUNT_ID:-}" ]]; then
   export CLOUDFLARE_ACCOUNT_ID="$(grep -oE 'cd8a[0-9a-f]+' "$CRED" | head -1)"
 fi
 
-cd "$D"
+# 站点目录内含工具临时目录 .tmp-tool-results/（其中 .fuse* 是工具虚拟文件系统占位，
+# 无法删除且会让 wrangler 遍历时报 "A file or directory could not be found"）。
+# 因此复制到干净的临时暂存目录再部署，排除 .git/.wrangler/.tmp-tool-results 等。
+STAGE="$(mktemp -d)/books-staging"
+mkdir -p "$STAGE"
+echo ">>> 复制到暂存目录 $STAGE"
+for item in index.html reader.html search.html lib books koodo; do
+  [[ -e "$D/$item" ]] && cp -r "$D/$item" "$STAGE/"
+done
+
+cd "$STAGE"
 echo ">>> 部署到 Cloudflare Pages (books)…"
-if [[ "${1:-}" == "--no-koodo" && -d koodo ]]; then
-  wrangler pages deploy . --project-name books --branch main --exclude=koodo 2>&1 | tail -15
-else
-  wrangler pages deploy . --project-name books --branch main 2>&1 | tail -15
+if [[ "${1:-}" == "--no-koodo" ]]; then
+  rm -rf "$STAGE/koodo"
 fi
+wrangler pages deploy . --project-name books --branch main --commit-dirty=true 2>&1 | tail -15
+rc=$?
+rm -rf "$STAGE"
+exit $rc

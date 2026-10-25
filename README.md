@@ -9,6 +9,7 @@
 | 书架 | `https://books.mars-y.com/` |
 | 阅读器（指定书） | `https://books.mars-y.com/reader?file=books/<文件名>&title=<书名>` |
 | 全网搜书 | `https://books.mars-y.com/search` |
+| Koodo Reader | `https://books.mars-y.com/koodo/` |
 | 示例 | `https://books.mars-y.com/reader?file=books/Contagious_Jonah_Berger.epub&title=Contagious（疯传）` |
 
 > 说明：Cloudflare Pages 自动把 `/reader` → `reader.html`、`/search` → `search.html`（无需 `_redirects`；加 `_redirects` 反而会产生 308 循环，已移除）。
@@ -87,23 +88,18 @@ CLOUDFLARE_API_TOKEN=<token> CLOUDFLARE_ACCOUNT_ID=<account> \
 ```
 （项目：`books`，自定义域名 `books.mars-y.com`）
 
-## 已知待办：Koodo Reader
+## Koodo Reader（已部署）
 
-计划用 Koodo Reader（github.com/koodo-reader/koodo-reader）替换自研阅读器，提供更强的书架/注释/OPDS 能力。
+Koodo Reader（github.com/koodo-reader/koodo-reader）的 web 版已上线，入口 `https://books.mars-y.com/koodo/`，提供更强的书架/注释/OPDS 能力。
 
-**当前状态：沙箱环境无法完成其 web 构建**，原因：
-- `npm/yarn` 下载 `react-scripts` 包被截断损坏（`scripts/` 缺失），清缓存重装仍失败；
-- 构建拉取 electron 依赖网络不通；
-- 预构建的 ghcr.io Docker 镜像（内含 `/usr/share/caddy` 即 web 静态包）直连/走代理均不可达。
-
-**完成后部署方式**（网络稳定时）：
-```bash
-K=/home/user/.doubao/agent_mode/workspace/tools/koodo-web
-cd $K/src && yarn install --ignore-scripts && PUBLIC_URL=/koodo yarn build
-# build/ 复制到站点根目录 koodo/ 下，wrangler pages deploy，访问 books.mars-y.com/koodo
-# 或用 ghcr.io/koodo-reader/koodo-reader 镜像提取 /usr/share/caddy
+**构建方式**：沙箱 npm/yarn 直连下载部分包被 CDN 层污染（react-scripts/cross-spawn/register-scheme 反复损坏），故改用官方 ghcr.io 镜像提取预构建静态包：
 ```
-说明：Koodo Reader 不支持 `?file=` 参数直接打开指定书，因此 `books.mars-y.com/reader?file=...` 仍由当前 epub.js 阅读器承担（即指定 URL 不受影响）。
+# 用 gh 的 token 认证 ghcr，拉 ghcr.io/koodo-reader/koodo-reader:master 的 amd64 manifest，
+# 下载 layers（blob 需 -L 跟随 302），解包合并后取 /usr/share/caddy（即 web build），
+# 复制到站点根目录 koodo/ 下即可。当前提取产物在 tools/koodo-web/koodo-build/。
+```
+
+说明：Koodo Reader 不支持 `?file=` 参数直接打开指定书，因此 `books.mars-y.com/reader?file=...` 仍由当前 epub.js 阅读器承担（即指定 URL 不受影响）；Koodo 内的书需在其界面导入到浏览器书库。
 
 ## 运维备注
 
