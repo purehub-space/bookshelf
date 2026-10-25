@@ -1,0 +1,8 @@
+/books/*
+  Cache-Control: public, max-age=86400, must-revalidate
+/lib/*
+  Cache-Control: public, max-age=31536000, immutable
+/reader.html
+  Cache-Control: public, max-age=86400
+/koodo/*
+  Cache-Control: public, max-age=31536000, immutable
